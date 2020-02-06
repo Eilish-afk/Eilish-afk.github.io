@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+<html lang="en" class="loading">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>【翻译】Low-Level Windows API Access From PowerShell - Hexo</title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="google" content="notranslate" />
+    <meta name="keywords" content="Fechin,"> 
+    <meta name="description" content="原文链接：http://www.fuzzysecurity.com/tutorials/24.html
+
+Hola, as I’m sure you know by now PowerShell, ,"> 
+    <meta name="author" content="John Doe"> 
+    <link rel="alternative" href="atom.xml" title="Hexo" type="application/atom+xml"> 
+    <link rel="icon" href="/img/favicon.png"> 
+    
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+
+    
+<link rel="stylesheet" href="/css/diaspora.css">
+
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({
+              google_ad_client: "ca-pub-8691406134231910",
+              enable_page_level_ads: true
+         });
+    </script>
+    <script async custom-element="amp-auto-ads"
+        src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+    </script>
+<meta name="generator" content="Hexo 4.1.1"></head>
+
+<body class="loading">
+    <span id="config-title" style="display:none">Hexo</span>
+    <div id="loader"></div>
+    <div id="single">
+    <div id="top" style="display: block;">
+    <div class="bar" style="width: 0;"></div>
+    <a class="icon-home image-icon" href="javascript:;" data-url="http://yoursite.com"></a>
+    <div title="播放/暂停" class="icon-play"></div>
+    <h3 class="subtitle">【翻译】Low-Level Windows API Access From PowerShell</h3>
+    <div class="social">
+        <!--<div class="like-icon">-->
+            <!--<a href="javascript:;" class="likeThis active"><span class="icon-like"></span><span class="count">76</span></a>-->
+        <!--</div>-->
+        <div>
+            <div class="share">
+                <a title="获取二维码" class="icon-scan" href="javascript:;"></a>
+            </div>
+            <div id="qr"></div>
+        </div>
+    </div>
+    <div class="scrollbar"></div>
+</div>
+
+    <div class="section">
+        <div class="article">
+    <div class='main'>
+        <h1 class="title">【翻译】Low-Level Windows API Access From PowerShell</h1>
+        <div class="stuff">
+            <span>二月 04, 2020</span>
+            
+  <ul class="post-tags-list" itemprop="keywords"><li class="post-tags-list-item"><a class="post-tags-list-link" href="/tags/Windows%E6%B8%97%E9%80%8F/" rel="tag">Windows渗透</a></li></ul>
+
+
+        </div>
+        <div class="content markdown">
+            <p>原文链接：<a href="http://www.fuzzysecurity.com/tutorials/24.html" target="_blank" rel="noopener">http://www.fuzzysecurity.com/tutorials/24.html</a></p>
+<hr>
+<p>Hola, as I’m sure you know by now PowerShell, aka Microsoft’s post-exploitation language, is pretty awesome! Extending PowerShell with C#.NET means that you can do pretty much anything. Sometimes, native PowerShell functionality is not enough and low-level access to the Windows API is required. One example of this is the NetSessionEnum API which is used by tools such as NetSess and Veil-Powerview to remotely enumerate active sessions on domain machines. In this post we will look at a few examples that will hopefully get you going on scripting together you own Windows API calls!</p>
+<p>It should be noted that the examples below are using C# to define the Windows API structs. This is not optimal from an attackers perspective as the C# compilation will write temporary files to disk at runtime. However, using the .NET System.Reflection namespace adds some overhead to what we are trying to achieve. Once the basics have been understood, it is relatively easy to piggyback the great work done by Matt Graeber to get true in-memory residence.</p>
+<h5 id="引用："><a href="#引用：" class="headerlink" title="引用："></a>引用：</h5><ul>
+<li>Pinvoke - <a href="http://www.pinvoke.net/" target="_blank" rel="noopener">here</a></li>
+<li>Use PowerShell to Interact with the Windows API: Part 1 - <a href="http://blogs.technet.com/b/heyscriptingguy/archive/2013/06/25/use-powershell-to-interact-with-the-windows-api-part-1.aspx" target="_blank" rel="noopener">here</a></li>
+<li>Use PowerShell to Interact with the Windows API: Part 2 - <a href="http://blogs.technet.com/b/heyscriptingguy/archive/2013/06/26/use-powershell-to-interact-with-windows-apis-part-2.aspx" target="_blank" rel="noopener">here</a></li>
+<li>Use PowerShell to Interact with the Windows API: Part 3 - <a href="http://blogs.technet.com/b/heyscriptingguy/archive/2013/06/27/use-powershell-to-interact-with-the-windows-api-part-3.aspx" target="_blank" rel="noopener">here</a></li>
+<li>Accessing the Windows API in PowerShell via .NET methods and reflection - <a href="http://www.exploit-monday.com/2012/05/accessing-native-windows-api-in.html" target="_blank" rel="noopener">here</a></li>
+<li>Deep Reflection: Defining Structs and Enums in PowerShell - <a href="http://www.exploit-monday.com/2012/07/structs-and-enums-using-reflection.html" target="_blank" rel="noopener">here</a></li>
+</ul>
+<h5 id="下载："><a href="#下载：" class="headerlink" title="下载："></a>下载：</h5><ul>
+<li>Invoke-CreateProcess.ps1 - <a href="https://github.com/FuzzySecurity/PowerShell-Suite/blob/master/Invoke-CreateProcess.ps1" target="_blank" rel="noopener">here</a></li>
+<li>Invoke-NetSessionEnum.ps1 - <a href="https://github.com/FuzzySecurity/PowerShell-Suite/blob/master/Invoke-NetSessionEnum.ps1" target="_blank" rel="noopener">here</a></li>
+</ul>
+<h3 id="User32-MessageBox"><a href="#User32-MessageBox" class="headerlink" title="User32 : : MessageBox"></a>User32 : : MessageBox</h3><hr>
+<p>创建消息框可能是最直接的示例之一，因为API调用需要很少的输入。<br>下面是MSDN中定义的结构体：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">int WINAPI MessageBox(</span><br><span class="line">  _In_opt_ HWND    hWnd,</span><br><span class="line">  _In_opt_ LPCTSTR lpText,</span><br><span class="line">  _In_opt_ LPCTSTR lpCaption,</span><br><span class="line">  _In_     UINT    uType</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<p>转换至C#非常简单，如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">Add-Type -TypeDefinition @&quot;</span><br><span class="line">using System;</span><br><span class="line">using System.Diagnostics;</span><br><span class="line">using System.Runtime.InteropServices;</span><br><span class="line"></span><br><span class="line">public static class User32</span><br><span class="line">&#123;</span><br><span class="line">    [DllImport(&quot;user32.dll&quot;, CharSet&#x3D;CharSet.Auto)]</span><br><span class="line">        public static extern bool MessageBox(</span><br><span class="line">            IntPtr hWnd,     &#x2F;&#x2F;&#x2F; Parent window handle</span><br><span class="line">            String text,     &#x2F;&#x2F;&#x2F; Text message to display</span><br><span class="line">            String caption,  &#x2F;&#x2F;&#x2F; Window caption</span><br><span class="line">            int options);    &#x2F;&#x2F;&#x2F; MessageBox type</span><br><span class="line">&#125;</span><br><span class="line">&quot;@</span><br><span class="line"></span><br><span class="line">[User32]::MessageBox(0,&quot;Text&quot;,&quot;Caption&quot;,0) |Out-Null</span><br></pre></td></tr></table></figure>
+<p>执行这段代码后出现弹框：</p>
+<p><img src="http://www.fuzzysecurity.com/tutorials/images/WinAPI-1.png" alt="tutorials"></p>
+<p>将参数传递至MessageBox：</p>
+<p><code>[User32]::MessageBox(0,&quot;Text&quot;,&quot;Caption&quot;,0x4)</code></p>
+<p><img src="http://www.fuzzysecurity.com/tutorials/images/WinAPI-2.png" alt="tutorials"></p>
+<h3 id="User32-CallWindowProc"><a href="#User32-CallWindowProc" class="headerlink" title="User32 : : CallWindowProc"></a>User32 : : CallWindowProc</h3><hr>
+<p>让我们尝试一些更复杂的事情，如果我们想在dll中调用导出函数，我们需要执行以下步骤:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[Kernel32]::LoadLibrary                 # Load DLL</span><br><span class="line">    |___[Kernel32]::GetProcAddress      # Get function pointer</span><br><span class="line">           |___[User32]::CallWindowProc # Call function</span><br></pre></td></tr></table></figure>
+<p>这里有些取巧的是，CallWindowProc不需要任何参数的情况下起作用。出于演示目的，适合我们的需求。</p>
+<p>User32.dll包含一个函数（LockWorkStation），可用于锁定用户的桌面。 执行该功能的代码如下。</p>
+
+            <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
+            <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="false">
+                <source type="audio/mpeg" src="">
+            </audio>
+            
+                <ul id="audio-list" style="display:none">
+                    
+                        
+                            <li title='0' data-url='http://link.hhtjim.com/163/5146554.mp3'></li>
+                        
+                    
+                        
+                            <li title='1' data-url='http://link.hhtjim.com/qq/001faIUs4M2zna.mp3'></li>
+                        
+                    
+                </ul>
+            
+        </div>
+        
+    <div id='gitalk-container' class="comment link"
+        data-ae='false'
+        data-ci=''
+        data-cs=''
+        data-r=''
+        data-o=''
+        data-a=''
+        data-d='false'
+    >查看评论</div>
+
+
+    </div>
+    
+</div>
+
+
+    </div>
+</div>
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"pluginModelPath":"assets/","model":{"jsonPath":"live2d-little-little-black"},"display":{"width":150,"height":300,"position":"right"},"mobile":{"show":false},"log":false,"pluginJsPath":"lib/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+
+<script src="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+
+
+<script src="//lib.baomitu.com/jquery/1.8.3/jquery.min.js"></script>
+<script src="/js/plugin.js"></script>
+<script src="/js/diaspora.js"></script>
+
+
+<link rel="stylesheet" href="/photoswipe/photoswipe.css">
+<link rel="stylesheet" href="/photoswipe/default-skin/default-skin.css">
+
+
+<script src="/photoswipe/photoswipe.min.js"></script>
+<script src="/photoswipe/photoswipe-ui-default.min.js"></script>
+
+
+<!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+            <div class="pswp__top-bar">
+                <!--  Controls are self-explanatory. Order can be changed. -->
+                <div class="pswp__counter"></div>
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+</html>
+<!-- 页面点击 -->
+<script type="text/javascript" src="/js/click.js"></script>
